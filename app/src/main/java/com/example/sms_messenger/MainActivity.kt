@@ -1,44 +1,49 @@
 package com.example.sms_messenger
 
 import android.os.Build
-import android.os.Bundle
-import android.provider.ContactsContract.CommonDataKinds.Phone
-import android.telephony.SmsManager
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import java.lang.Exception
-
+import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
+import androidx.annotation.RequiresApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import Ozeki.Libs.Rest.Configuration
+import Ozeki.Libs.Rest.Message
+import Ozeki.Libs.Rest.MessageApi
 
 class MainActivity : AppCompatActivity() {
-    lateinit var phoneEdt : EditText
-    lateinit var messageEdt : EditText
-    lateinit var sendMsgBtn : Button
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        phoneEdt = findViewById(R.id.idEdtPhone)
-        messageEdt = findViewById(R.id.idEdtMessage)
-        sendMsgBtn = findViewById(R.id.btnMessage)
 
-        sendMsgBtn.setOnClickListener {
-            val phoneNumber = phoneEdt.text.toString()
-            val message = messageEdt.text.toString()
-            try{
-                val smsManager: SmsManager
-            if (Build.VERSION.SDK_INT >= 23) {
-                smsManager = this.getSystemService(SmsManager::class.java)
-            } else {
-                smsManager = SmsManager.getDefault()
+        val btnSendRequest:android.widget.Button = findViewById(R.id.btnSendRequest)
+        val inputToAddress:android.widget.EditText = findViewById(R.id.inputToAddress)
+        val inputMessage:android.widget.EditText = findViewById(R.id.inputMessage)
+        val logBox:android.widget.TextView = findViewById(R.id.logBox)
+        logBox.movementMethod = ScrollingMovementMethod()
+
+        val configuration = Configuration(
+            username = "http_user",
+            password = "qwe123",
+            apiurl = "http://10.0.2.2:9509/api"
+        )
+
+        val api = MessageApi(configuration)
+
+        btnSendRequest.setOnClickListener {
+            if (inputToAddress.text.toString() != "" && inputMessage.text.toString() != "") {
+                GlobalScope.launch(Dispatchers.IO) {
+                    val msg = Message()
+                    msg.ToAddress = inputToAddress.text.toString()
+                    msg.Text = inputMessage.text.toString()
+                    inputToAddress.text.clear()
+                    inputMessage.text.clear()
+                    val response = api.Send(msg)
+                    logBox.text = String.format("%s\n%s", logBox.text, response.toString())
+                }
             }
-            // on below line we are sending text messages
-            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
-            Toast.makeText(applicationContext, "Message Sent", Toast.LENGTH_LONG).show()
-        }
-        catch(e:Exception){
-            Toast.makeText(applicationContext,"Please enter all the data ..."+e.message.toString(),Toast.LENGTH_LONG).show()
-        }
         }
     }
 }
